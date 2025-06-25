@@ -1,70 +1,61 @@
-Análisis Completo de tu Script de Machine Learning
-Tu código es un excelente ejemplo de un proyecto de ciencia de datos de principio a fin. Combina la recolección de datos a través de una API, el almacenamiento, el entrenamiento de un modelo de Machine Learning y la generación de pronósticos. A continuación se detalla su funcionamiento.
+Análisis Completo de tu Script de Machine Learning (Versión Mejorada)
+Tu código evoluciona a un sistema de ciencia de datos más sofisticado. Al integrar las APIs de Roads y Distance Matrix, no solo recolectas datos de duración, sino que enriqueces el contexto del viaje, permitiendo al modelo tomar decisiones más inteligentes.
 
-Parte A: Recolector de Datos de Tráfico (obtener_y_guardar_trafico_actual)
-Esta función es el corazón de la recolección de datos. Su objetivo es obtener información fresca y guardarla para el futuro.
+Parte A: Recolector de Datos Avanzado
+Esta sección ahora recolecta un conjunto de datos mucho más rico.
 
-Llamada a la API de Google Routes: Se conecta a la API de Google para solicitar la duración de un viaje entre dos puntos geográficos que has definido (Llíria y Bétera).
+Llamada Principal a la Routes API: Sigue siendo el punto de partida. La novedad es que ahora también se le solicita la polyline (una representación codificada de toda la ruta). Esto es esencial para poder usar la Roads API.
 
-Parámetros Clave:
+Integración con la Roads API (snappedSpeedLimits):
 
-travelMode: "DRIVE": Especifica que el viaje es en coche.
+Propósito: Esta API toma una serie de coordenadas de una ruta y devuelve información detallada sobre ese tramo de carretera, incluyendo el límite de velocidad.
 
-routingPreference: "TRAFFIC_AWARE": Este es el parámetro más importante. Le pide a Google que calcule la duración del viaje teniendo en cuenta las condiciones de tráfico actuales.
+Implementación: La polyline obtenida de la Routes API se decodifica en una lista de puntos (latitud, longitud). Esta lista de puntos se envía a la Roads API.
 
-Extracción de Datos: De la respuesta de la API, extrae la duration, que es el tiempo de viaje con tráfico, y lo convierte de un formato de texto (ej. "962s") a un número entero de segundos.
+Nueva Característica Generada: Se calcula el límite de velocidad promedio para toda la ruta. Esta es una característica muy poderosa, ya que el modelo puede aprender la diferencia entre el tiempo de viaje en una autopista (límite 120 km/h) y en una zona urbana (límite 50 km/h).
 
-Almacenamiento Histórico:
+Integración con la Distance Matrix API:
 
-Crea un nuevo registro que contiene dos piezas de información: el momento exacto de la consulta (timestamp) y la duración del viaje en segundos (duracion_viaje_seg).
+Propósito: Esta API es experta en calcular tiempos y distancias entre múltiples orígenes y destinos. Aunque la Routes API ya nos da esta información, la Distance Matrix puede ser útil para obtener datos adicionales, como la duración sin tráfico (duration_in_traffic vs duration), que nos permite calcular una medida de la "congestión".
 
-Añade este nuevo registro a un archivo CSV (historico_trafico_google.csv). Si el archivo no existe, lo crea con las cabeceras correctas. Si ya existe, simplemente añade la nueva fila de datos.
+Nueva Característica Generada: Se puede calcular un factor de congestión (ej: duracion_con_trafico / duracion_sin_trafico). Un valor de 1.5 significaría que el viaje toma un 50% más de tiempo debido al tráfico.
 
-Manejo de Errores: Está preparado para fallos, como un error en la conexión a la API o si la respuesta de Google no viene en el formato esperado, lo que evita que el programa se detenga bruscamente.
+Almacenamiento Histórico Mejorado:
 
-Parte B: Entrenador y Pronosticador de ML (entrenar_y_predecir)
-Esta es la sección de inteligencia artificial, donde la "magia" ocurre. Utiliza los datos recolectados para aprender patrones y hacer predicciones.
+El archivo CSV ahora guarda no solo el timestamp y la duracion_viaje_seg, sino también las nuevas características: distancia_metros, velocidad_limite_promedio_kmh y factor_congestion.
 
-Carga de Datos: Lee todo el historial de datos guardado en el archivo historico_trafico_google.csv. Para la primera ejecución, si no hay datos, crea un pequeño archivo de ejemplo para que el resto del script pueda funcionar sin errores.
+Parte B: Entrenador y Pronosticador de ML Mejorado
+El modelo de Machine Learning ahora tiene más información para aprender.
 
-Ingeniería de Características (Feature Engineering): Este es un paso crucial en Machine Learning. El modelo no puede entender una fecha directamente, por lo que la transformas en características numéricas que sí puede interpretar:
+Carga de Datos Enriquecidos: El proceso de carga es el mismo, pero el DataFrame resultante contiene las nuevas columnas con información de velocidad y congestión.
 
-hora: La hora del día (0-23).
+Ingeniería de Características Ampliada: El modelo ya no depende solo del tiempo (hora, dia_semana). Ahora, las características de entrada (X) incluyen:
 
-dia_semana: El día de la semana (Lunes=0, Domingo=6).
+hora
 
-es_finde: Una característica binaria (1 si es fin de semana, 0 si no lo es).
-La hipótesis es que la duración del viaje depende fuertemente de estas tres variables.
+dia_semana
 
-Entrenamiento del Modelo:
+es_finde
 
-Algoritmo: Utilizas un RandomForestRegressor. Es una excelente elección porque es potente, funciona bien con datos tabulares y es menos propenso al sobreajuste (overfitting) que un solo árbol de decisión.
+velocidad_limite_promedio_kmh (¡Nueva!)
 
-División de Datos: Separa los datos en un conjunto de entrenamiento (para que el modelo aprenda) y uno de prueba (para evaluarlo de forma imparcial).
+distancia_metros (¡Nueva!)
 
-Entrenamiento: El modelo fit "mira" los datos de entrenamiento y aprende la relación entre la hora/día de la semana y la duración del viaje.
+factor_congestion (¡Nueva!)
 
-Guardado: Utiliza joblib.dump para guardar el modelo ya entrenado en un archivo (.pkl). Esto es muy útil porque te permite usar el modelo para predecir en el futuro sin tener que re-entrenarlo cada vez.
+Entrenamiento del Modelo: El RandomForestRegressor sigue siendo una excelente opción. Ahora, al entrenarse, no solo aprenderá "los lunes a las 8 am hay más tráfico", sino que también podrá aprender patrones más complejos como "incluso a las 3 pm, si la ruta incluye tramos con límites de velocidad bajos, el viaje será más largo" o "un factor de congestión alto es un predictor muy fuerte de un viaje lento, independientemente de la hora".
 
-Evaluación del Modelo: Mide qué tan bueno es el modelo:
-
-MAE (Error Medio Absoluto): Te dice, en promedio, por cuántos segundos se equivoca la predicción. Es una métrica fácil de interpretar.
-
-R² (Coeficiente de Determinación): Indica qué porcentaje de la variación en el tiempo de viaje es explicado por tus características (hora, día). Un valor cercano a 1.0 significa que el modelo es muy bueno para explicar los datos.
-
-Pronóstico a Futuro:
-
-Crea un conjunto de datos para las próximas 24 horas.
-
-Aplica la misma ingeniería de características que antes.
-
-Usa el modelo entrenado (model.predict()) para pronosticar la duración del viaje para cada una de esas 24 horas futuras.
-
-Finalmente, presenta los resultados en una tabla clara y legible.
+Evaluación y Pronóstico: El proceso es idéntico, pero se espera que las métricas de evaluación (MAE y R²) mejoren, ya que el modelo tiene una comprensión mucho más profunda de los factores que influyen en la duración de un viaje. Al predecir el futuro, aunque no tengamos el tráfico en tiempo real, podemos hacer suposiciones basadas en la hora y el día para estimar un factor_congestion y usar los límites de velocidad (que son estáticos) para obtener un pronóstico más preciso.
 
 Requisitos para Ejecutar el Script
-Para que este código funcione, necesitas tener instaladas las siguientes librerías de Python:
+Además de las librerías anteriores, necesitarás una nueva para decodificar las polilíneas de Google:
 
-pip install pandas numpy scikit-learn joblib requests
+pip install pandas numpy scikit-learn joblib requests polyline
 
-Y lo más importante, debes reemplazar "AQUI_VA_TU_API_KEY" con tu propia clave de API de Google Cloud Platform, que tenga la API de Routes habilitada.
+Y lo más importante, debes asegurarte de que tu clave de API de Google Cloud Platform tenga habilitadas las siguientes tres APIs:
+
+Routes API
+
+Roads API
+
+Distance Matrix API

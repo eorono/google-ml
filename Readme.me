@@ -1,0 +1,70 @@
+Análisis Completo de tu Script de Machine Learning
+Tu código es un excelente ejemplo de un proyecto de ciencia de datos de principio a fin. Combina la recolección de datos a través de una API, el almacenamiento, el entrenamiento de un modelo de Machine Learning y la generación de pronósticos. A continuación se detalla su funcionamiento.
+
+Parte A: Recolector de Datos de Tráfico (obtener_y_guardar_trafico_actual)
+Esta función es el corazón de la recolección de datos. Su objetivo es obtener información fresca y guardarla para el futuro.
+
+Llamada a la API de Google Routes: Se conecta a la API de Google para solicitar la duración de un viaje entre dos puntos geográficos que has definido (Llíria y Bétera).
+
+Parámetros Clave:
+
+travelMode: "DRIVE": Especifica que el viaje es en coche.
+
+routingPreference: "TRAFFIC_AWARE": Este es el parámetro más importante. Le pide a Google que calcule la duración del viaje teniendo en cuenta las condiciones de tráfico actuales.
+
+Extracción de Datos: De la respuesta de la API, extrae la duration, que es el tiempo de viaje con tráfico, y lo convierte de un formato de texto (ej. "962s") a un número entero de segundos.
+
+Almacenamiento Histórico:
+
+Crea un nuevo registro que contiene dos piezas de información: el momento exacto de la consulta (timestamp) y la duración del viaje en segundos (duracion_viaje_seg).
+
+Añade este nuevo registro a un archivo CSV (historico_trafico_google.csv). Si el archivo no existe, lo crea con las cabeceras correctas. Si ya existe, simplemente añade la nueva fila de datos.
+
+Manejo de Errores: Está preparado para fallos, como un error en la conexión a la API o si la respuesta de Google no viene en el formato esperado, lo que evita que el programa se detenga bruscamente.
+
+Parte B: Entrenador y Pronosticador de ML (entrenar_y_predecir)
+Esta es la sección de inteligencia artificial, donde la "magia" ocurre. Utiliza los datos recolectados para aprender patrones y hacer predicciones.
+
+Carga de Datos: Lee todo el historial de datos guardado en el archivo historico_trafico_google.csv. Para la primera ejecución, si no hay datos, crea un pequeño archivo de ejemplo para que el resto del script pueda funcionar sin errores.
+
+Ingeniería de Características (Feature Engineering): Este es un paso crucial en Machine Learning. El modelo no puede entender una fecha directamente, por lo que la transformas en características numéricas que sí puede interpretar:
+
+hora: La hora del día (0-23).
+
+dia_semana: El día de la semana (Lunes=0, Domingo=6).
+
+es_finde: Una característica binaria (1 si es fin de semana, 0 si no lo es).
+La hipótesis es que la duración del viaje depende fuertemente de estas tres variables.
+
+Entrenamiento del Modelo:
+
+Algoritmo: Utilizas un RandomForestRegressor. Es una excelente elección porque es potente, funciona bien con datos tabulares y es menos propenso al sobreajuste (overfitting) que un solo árbol de decisión.
+
+División de Datos: Separa los datos en un conjunto de entrenamiento (para que el modelo aprenda) y uno de prueba (para evaluarlo de forma imparcial).
+
+Entrenamiento: El modelo fit "mira" los datos de entrenamiento y aprende la relación entre la hora/día de la semana y la duración del viaje.
+
+Guardado: Utiliza joblib.dump para guardar el modelo ya entrenado en un archivo (.pkl). Esto es muy útil porque te permite usar el modelo para predecir en el futuro sin tener que re-entrenarlo cada vez.
+
+Evaluación del Modelo: Mide qué tan bueno es el modelo:
+
+MAE (Error Medio Absoluto): Te dice, en promedio, por cuántos segundos se equivoca la predicción. Es una métrica fácil de interpretar.
+
+R² (Coeficiente de Determinación): Indica qué porcentaje de la variación en el tiempo de viaje es explicado por tus características (hora, día). Un valor cercano a 1.0 significa que el modelo es muy bueno para explicar los datos.
+
+Pronóstico a Futuro:
+
+Crea un conjunto de datos para las próximas 24 horas.
+
+Aplica la misma ingeniería de características que antes.
+
+Usa el modelo entrenado (model.predict()) para pronosticar la duración del viaje para cada una de esas 24 horas futuras.
+
+Finalmente, presenta los resultados en una tabla clara y legible.
+
+Requisitos para Ejecutar el Script
+Para que este código funcione, necesitas tener instaladas las siguientes librerías de Python:
+
+pip install pandas numpy scikit-learn joblib requests
+
+Y lo más importante, debes reemplazar "AQUI_VA_TU_API_KEY" con tu propia clave de API de Google Cloud Platform, que tenga la API de Routes habilitada.
